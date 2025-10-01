@@ -35,7 +35,7 @@ def get_processor():
 @app.post("/process-rfp/")
 async def process_rfp(file: UploadFile = File(...)):
     """
-    Process an RFP PDF file through the complete pipeline
+    Process an RFP PDF file and return combined Excel file with all sheets
     """
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
@@ -57,14 +57,60 @@ async def process_rfp(file: UploadFile = File(...)):
         proc = get_processor()
         result = await proc.process_rfp(pdf_path, session_folder)
        
-        return JSONResponse(content={
-            "status": "success",
-            "session_id": session_id,
-            "timestamp": timestamp,
-            "message": "RFP processed successfully",
-            "files_generated": result["files_generated"],
-            "processing_time": result["processing_time"]
-        })
+        # Create combined Excel file
+        base_path = session_folder / "excel"
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            combined_wb = Workbook()
+            combined_wb.remove(combined_wb.active)  # Remove default sheet
+           
+            excel_files = {
+                'BOQ': 'boq.xlsx',
+                'Prequalification': 'prequalification.xlsx', 
+                'Technical_Qualification': 'technical_qualification.xlsx',
+                'Summary': 'summary.xlsx',
+                'Payment_Terms': 'payment_terms.xlsx'
+            }
+           
+            for sheet_name, filename in excel_files.items():
+                file_path = base_path / filename
+                if file_path.exists():
+                    source_wb = load_workbook(file_path)
+                    source_ws = source_wb.active
+                   
+                    # Create new sheet in combined workbook
+                    new_ws = combined_wb.create_sheet(title=sheet_name)
+                   
+                    # Copy all cells with formatting
+                    for row in source_ws.iter_rows():
+                        for cell in row:
+                            new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+                            if cell.has_style:
+                                new_cell.font = cell.font.copy()
+                                new_cell.border = cell.border.copy()
+                                new_cell.fill = cell.fill.copy()
+                                new_cell.number_format = cell.number_format
+                                new_cell.protection = cell.protection.copy()
+                                new_cell.alignment = cell.alignment.copy()
+                   
+                    # Copy column dimensions
+                    for col in source_ws.column_dimensions:
+                        new_ws.column_dimensions[col] = source_ws.column_dimensions[col]
+                   
+                    # Copy row dimensions
+                    for row in source_ws.row_dimensions:
+                        new_ws.row_dimensions[row] = source_ws.row_dimensions[row]
+           
+            combined_wb.save(tmp_file.name)
+           
+            # Cleanup session folder after creating combined file
+            cleanup_temp_files(session_folder)
+           
+            return FileResponse(
+                path=tmp_file.name,
+                filename=f"{file.filename.replace('.pdf', '')}_RFP_Analysis.xlsx",
+                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
        
     except Exception as e:
         # Cleanup on error
@@ -74,64 +120,7 @@ async def process_rfp(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
  
  
-@app.get("/download-all-excel/{session_id}")
-async def download_all_excel(session_id: str):
-    """
-    Download all Excel files combined into a single workbook with separate sheets
-    """
-    base_path = Path("output") / session_id / "excel"
-   
-    if not base_path.exists():
-        raise HTTPException(status_code=404, detail="Excel files not found")
-   
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-        combined_wb = Workbook()
-        combined_wb.remove(combined_wb.active)  # Remove default sheet
-       
-        excel_files = {
-            'boq_excel': 'boq.xlsx',
-            'pq_excel': 'prequalification.xlsx',
-            'tq_excel': 'technical_qualification.xlsx',
-            'summary_excel': 'summary.xlsx',
-            'payment_terms_excel': 'payment_terms.xlsx'
-        }
-       
-        for sheet_name, filename in excel_files.items():
-            file_path = base_path / filename
-            if file_path.exists():
-                source_wb = load_workbook(file_path)
-                source_ws = source_wb.active
-               
-                # Create new sheet in combined workbook
-                new_ws = combined_wb.create_sheet(title=sheet_name)
-               
-                # Copy all cells with formatting
-                for row in source_ws.iter_rows():
-                    for cell in row:
-                        new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
-                        if cell.has_style:
-                            new_cell.font = cell.font.copy()
-                            new_cell.border = cell.border.copy()
-                            new_cell.fill = cell.fill.copy()
-                            new_cell.number_format = cell.number_format
-                            new_cell.protection = cell.protection.copy()
-                            new_cell.alignment = cell.alignment.copy()
-               
-                # Copy column dimensions
-                for col in source_ws.column_dimensions:
-                    new_ws.column_dimensions[col] = source_ws.column_dimensions[col]
-               
-                # Copy row dimensions
-                for row in source_ws.row_dimensions:
-                    new_ws.row_dimensions[row] = source_ws.row_dimensions[row]
-       
-        combined_wb.save(tmp_file.name)
-       
-        return FileResponse(
-            path=tmp_file.name,
-            filename=f"{session_id}_combined_excel.xlsx",
-            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+
  
 @app.get("/status/{session_id}")
 async def get_status(session_id: str):
