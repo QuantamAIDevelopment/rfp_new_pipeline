@@ -1,7 +1,6 @@
 import os
 from openai import AzureOpenAI
 from dotenv import load_dotenv
-from openai_fix import create_azure_openai_client
 
 load_dotenv()
 
@@ -18,7 +17,16 @@ def extract_pure_technical_qualification(rfp_content: str, output_path: str):
             return False
     
     try:
-        client = create_azure_openai_client(endpoint, subscription_key, api_version)
+        # Clear proxy environment variables to avoid conflicts
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+        for var in proxy_vars:
+            os.environ.pop(var, None)
+        
+        client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=subscription_key,
+            api_version=api_version
+        )
     except Exception as e:
         print(f"Error initializing Azure OpenAI client: {str(e)}")
         return False
