@@ -115,56 +115,6 @@ async def process_rfp(file: UploadFile = File(...)):
        
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
  
- 
-
- 
-@app.get("/status/{session_id}")
-async def get_status(session_id: str):
-    """
-    Get processing status for a session
-    """
-    session_folder = Path("output") / session_id
-   
-    if not session_folder.exists():
-        raise HTTPException(status_code=404, detail="Session not found")
-   
-    # Check which files exist
-    files_status = {}
-    file_mappings = {
-        "markdown": "parsed/rfp.md",
-        "boq": "extracted/boq.md",
-        "pq": "extracted/prequalification.md",
-        "tq": "extracted/technical_qualification.md",
-        "summary": "extracted/summary.md",
-        "payment_terms": "extracted/payment_terms.md"
-    }
-   
-    for file_type, path in file_mappings.items():
-        file_path = session_folder / path
-        files_status[file_type] = {
-            "exists": file_path.exists(),
-            "size": file_path.stat().st_size if file_path.exists() else 0
-        }
-   
-    return JSONResponse(content={
-        "session_id": session_id,
-        "files_status": files_status
-    })
- 
-@app.delete("/cleanup/{session_id}")
-async def cleanup_session(session_id: str):
-    """
-    Cleanup session files
-    """
-    session_folder = Path("output") / session_id
-   
-    if session_folder.exists():
-        cleanup_temp_files(session_folder)
-        return JSONResponse(content={"message": f"Session {session_id} cleaned up successfully"})
-    else:
-        raise HTTPException(status_code=404, detail="Session not found")
-
- 
 @app.get("/")
 async def api_info():
     return {"message": "RFP Processing Pipeline API", "version": "1.0.0"}
