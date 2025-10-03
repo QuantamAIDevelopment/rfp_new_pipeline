@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Any
 import os
 import sys
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Add parent directory to path to import existing modules
 sys.path.append(str(Path(__file__).parent.parent))
@@ -37,18 +38,25 @@ class RFPProcessor:
             with open(markdown_path, 'r', encoding='utf-8') as f:
                 rfp_content = f.read()
             
-            # Step 2: Extract information using LLM modules
+            # Step 2: Extract information using LLM modules (sequential to avoid rate limits)
             print("🔄 Step 2: Extracting information using LLM modules...")
-            extraction_tasks = [
-                self._extract_boq(rfp_content, session_folder),
-                self._extract_pq(rfp_content, session_folder),
-                self._extract_tq(rfp_content, session_folder),
-                self._extract_summary(rfp_content, session_folder),
-                self._extract_payment_terms(rfp_content, session_folder)
-            ]
+            extraction_results = []
             
-            # Run extractions concurrently
-            extraction_results = await asyncio.gather(*extraction_tasks, return_exceptions=True)
+            # Run extractions sequentially with delays
+            for extract_func in [
+                lambda: self._extract_boq(rfp_content, session_folder),
+                lambda: self._extract_pq(rfp_content, session_folder), 
+                lambda: self._extract_tq(rfp_content, session_folder),
+                lambda: self._extract_summary(rfp_content, session_folder),
+                lambda: self._extract_payment_terms(rfp_content, session_folder)
+            ]:
+                try:
+                    result = await extract_func()
+                    extraction_results.append(result)
+                    # Add delay between API calls to respect rate limits
+                    await asyncio.sleep(2)
+                except Exception as e:
+                    extraction_results.append(e)
             
             # Collect successful extractions
             for result in extraction_results:
