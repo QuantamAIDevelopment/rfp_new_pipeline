@@ -1,6 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
 import os
 import uuid
 from datetime import datetime
@@ -19,9 +18,6 @@ app = FastAPI(
     description="Process RFP PDFs through docling and extract structured information",
     version="1.0.0"
 )
- 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
  
 # Initialize the RFP processor (lazy loading)
 processor = None
