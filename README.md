@@ -44,11 +44,6 @@ NEW_DOCLING/
 
 ## Quick Start
 
-### Windows Users
-```bash
-setup_and_run.bat
-```
-
 ### Manual Setup
 
 1. **Install Dependencies**
@@ -86,18 +81,6 @@ The API directly returns a combined Excel file containing all extracted informat
 - **Technical_Qualification** - Technical qualification criteria
 - **Summary** - RFP key details summary
 - **Payment_Terms** - Payment terms and conditions
-
-### Check Processing Status (Optional)
-
-```bash
-curl -X GET "http://localhost:8000/status/{session_id}"
-```
-
-### Cleanup Session (Optional)
-
-```bash
-curl -X DELETE "http://localhost:8000/cleanup/{session_id}"
-```
 
 ### API Root
 
