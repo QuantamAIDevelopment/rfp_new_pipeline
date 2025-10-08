@@ -128,6 +128,10 @@ async def process_rfp(file: UploadFile = File(...)):
        
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
  
+@app.get("/health/")
+async def health_check():
+    return JSONResponse(content={"status": "ok", "message": "Service is running"})
+
 @app.get("/")
 async def api_info():
     return {"message": "RFP Processing Pipeline API", "version": "1.0.0"}
