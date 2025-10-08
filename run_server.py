@@ -12,7 +12,7 @@ def run_server():
     print("🚀 Starting RFP Processing Pipeline Server")
     print("=" * 50)
     print("📋 Server Configuration:")
-    print(f"   🌐 Host: 127.0.0.1")
+    print(f"   🌐 Host: 0.0.0.0")
     print(f"   🔌 Port: 8000")
     print(f"   📁 Output Directory: {output_dir.absolute()}")
     print(f"   🔄 Auto-reload: True")
@@ -28,7 +28,7 @@ def run_server():
     # Run the server
     uvicorn.run(
         "main:app",
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=8000,
         reload=True,
         log_level="info"

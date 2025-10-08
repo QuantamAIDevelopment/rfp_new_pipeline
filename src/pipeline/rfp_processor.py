@@ -4,17 +4,19 @@ from pathlib import Path
 from typing import Dict, Any
 import os
 import sys
+
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Add parent directory to path to import existing modules
 sys.path.append(str(Path(__file__).parent.parent))
 
-from llm_extractor.llm_extract_boq import extract_boq_criteria
-from llm_extractor.llm_extract_pq import extract_prequalification_criteria  
-from llm_extractor.llm_extract_pure_tq import extract_pure_technical_qualification
-from llm_extractor.rfp_llm_summary import extract_rfp_key_details
-from llm_extractor.llm_extract_payment_terms import extract_payment_terms
-from pipeline.utils import convert_markdown_to_excel
+
+from ..llm_extractor.llm_extract_boq import extract_boq_criteria
+from ..llm_extractor.llm_extract_pq import extract_prequalification_criteria  
+from ..llm_extractor.llm_extract_pure_tq import extract_pure_technical_qualification
+from ..llm_extractor.rfp_llm_summary import extract_rfp_key_details
+from ..llm_extractor.llm_extract_payment_terms import extract_payment_terms
+from .utils import convert_markdown_to_excel
 
 class RFPProcessor:
     """Main processor for RFP pipeline"""
@@ -175,23 +177,23 @@ class RFPProcessor:
             
             try:
                 if converter_type == "boq":
-                    from excel_convertor.boq_to_excel import create_boq_excel
+                    from ..excel_convertor.boq_to_excel import create_boq_excel
                     create_boq_excel(str(markdown_path), str(excel_path))
                 elif converter_type == "pq":
-                    from excel_convertor.pq_to_excel import create_prequalification_excel
+                    from ..excel_convertor.pq_to_excel import create_prequalification_excel
                     create_prequalification_excel(str(markdown_path), str(excel_path))
                 elif converter_type == "tq":
-                    from excel_convertor.pure_tq_to_excel import create_tq_excel
+                    from ..excel_convertor.pure_tq_to_excel import create_tq_excel
                     create_tq_excel(str(markdown_path), str(excel_path))
                 elif converter_type == "summary":
-                    from excel_convertor.rfp_summary_to_excel import create_rfp_excel
+                    from ..excel_convertor.rfp_summary_to_excel import create_rfp_excel
                     create_rfp_excel(str(markdown_path), str(excel_path))
                 elif converter_type == "payment":
-                    from excel_convertor.payment_terms_to_excel import create_payment_terms_excel
+                    from ..excel_convertor.payment_terms_to_excel import create_payment_terms_excel
                     create_payment_terms_excel(str(markdown_path), str(excel_path))
                 else:
                     # Use utils converter as fallback
-                    from pipeline.utils import convert_markdown_to_excel
+                    from .utils import convert_markdown_to_excel
                     with open(markdown_path, 'r', encoding='utf-8') as f:
                         content = f.read()
                     convert_markdown_to_excel(content, excel_path, "Data")

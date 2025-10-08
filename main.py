@@ -11,8 +11,8 @@ import tempfile
 import pandas as pd
 from openpyxl import load_workbook, Workbook
  
-from pipeline.rfp_processor import RFPProcessor
-from pipeline.utils import create_folder_structure, cleanup_temp_files
+from src.pipeline.rfp_processor import RFPProcessor
+from src.pipeline.utils import create_folder_structure, cleanup_temp_files
  
 app = FastAPI(
     title="RFP Processing Pipeline",
@@ -134,4 +134,4 @@ async def api_info():
  
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -24,22 +24,25 @@ NEW_DOCLING/
 ├── run_server.py                    # Server runner script
 ├── requirements.txt                 # Python dependencies
 ├── .env.example                     # Environment configuration template
-├── pipeline/                        # Processing pipeline modules
-│   ├── __init__.py
-│   ├── rfp_processor.py            # Main processor orchestrator
-│   └── utils.py                     # Utility functions
-├── llm_extractor/                   # LLM extraction modules
-│   ├── llm_extract_boq.py          # BOQ extraction
-│   ├── llm_extract_pq.py           # Prequalification extraction
-│   ├── llm_extract_pure_tq.py      # Technical qualification extraction
-│   ├── rfp_llm_summary.py          # RFP summary extraction
-│   └── llm_extract_payment_terms.py # Payment terms extraction
-└── excel_convertor/                 # Excel conversion modules
-    ├── boq_to_excel.py             # BOQ to Excel converter
-    ├── pq_to_excel.py              # PQ to Excel converter
-    ├── pure_tq_to_excel.py         # TQ to Excel converter
-    ├── rfp_summary_to_excel.py     # Summary to Excel converter
-    └── payment_terms_to_excel.py   # Payment terms to Excel converter
+└── src/                             # Source code modules
+    ├── pipeline/                    # Processing pipeline modules
+    │   ├── __init__.py
+    │   ├── rfp_processor.py        # Main processor orchestrator
+    │   └── utils.py                 # Utility functions
+    ├── llm_extractor/               # LLM extraction modules
+    │   ├── __init__.py
+    │   ├── llm_extract_boq.py      # BOQ extraction
+    │   ├── llm_extract_pq.py       # Prequalification extraction
+    │   ├── llm_extract_pure_tq.py  # Technical qualification extraction
+    │   ├── rfp_llm_summary.py      # RFP summary extraction
+    │   └── llm_extract_payment_terms.py # Payment terms extraction
+    └── excel_convertor/             # Excel conversion modules
+        ├── __init__.py
+        ├── boq_to_excel.py         # BOQ to Excel converter
+        ├── pq_to_excel.py          # PQ to Excel converter
+        ├── pure_tq_to_excel.py     # TQ to Excel converter
+        ├── rfp_summary_to_excel.py # Summary to Excel converter
+        └── payment_terms_to_excel.py # Payment terms to Excel converter
 ```
 
 ## Quick Start
