@@ -62,7 +62,7 @@ cp .env.example .env
 
 3. **Run Server**
 ```bash
-python run_server.py
+python main.py
 ```
 
 Server starts at `http://localhost:8000`
