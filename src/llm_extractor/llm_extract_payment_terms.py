@@ -7,24 +7,21 @@ import re
 
 load_dotenv()
 
-# Azure OpenAI Configuration
-endpoint = "https://allvy-rfp-rg-aai.cognitiveservices.azure.com/"
-model_name = "gpt-5-mini"
-deployment = "gpt-5-mini"
-api_version = "2024-12-01-preview"
-
 def extract_payment_terms(rfp_content: str, output_path: str):
     """
     Extract payment terms from RFP content using Azure OpenAI
     """
     
-    # Get API key from environment or user input
+    # Get Azure OpenAI configuration from environment variables
     subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://allvy-rfp-rg-aai.cognitiveservices.azure.com/")
+    model_name = os.getenv("AZURE_OPENAI_MODEL", "gpt-5-mini")
+    deployment = os.getenv("AZURE_OPENAI_MODEL", "gpt-5-mini")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    
     if not subscription_key:
-        subscription_key = input("Enter your Azure OpenAI API key: ").strip()
-        if not subscription_key:
-            print("[ERROR] API key is required")
-            return False
+        print("[ERROR] AZURE_OPENAI_API_KEY environment variable is required")
+        return False
     
     try:
         # Clear proxy environment variables to avoid conflicts

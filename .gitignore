@@ -19,46 +19,41 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual Environment
-venv/
-env/
-ENV/
-
-# Environment Variables
 .env
-.env.local
-.env.production
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Output Files
-output/
-*.md
-*.xlsx
-*.pdf
-*_boq.md
-*_pq.md
-*_tq.md
-*_summary.md
-*_payment_terms.md
-
-# Logs
-*.log
-logs/
-
-# Temporary Files
-tmp/
-temp/
-*.tmp
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Project specific
+output/
+temp/
+*.pdf
+*.xlsx
+*.zip
+
 # Azure
-.azure/
+local.settings.json
+__blobstorage__/
+__queuestorage__/
+__azurite_db*__.json
+
+# Logs
+*.log
+logs/
