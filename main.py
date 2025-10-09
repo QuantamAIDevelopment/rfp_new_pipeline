@@ -17,7 +17,9 @@ from src.pipeline.utils import create_folder_structure, cleanup_temp_files
 app = FastAPI(
     title="RFP Processing Pipeline",
     description="Process RFP PDFs through docling and extract structured information",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Add CORS middleware
