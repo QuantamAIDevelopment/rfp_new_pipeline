@@ -14,7 +14,7 @@ source /home/site/wwwroot/venv/bin/activate
 
 echo "Installing dependencies..."
 python -m pip install --upgrade pip
-pip install -r /home/site/wwwroot/requirements.txt
+pip install --no-cache-dir -r /home/site/wwwroot/requirements-minimal.txt
 
 echo "Starting Gunicorn with Uvicorn workers..."
 cd /home/site/wwwroot

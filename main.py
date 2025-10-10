@@ -13,6 +13,7 @@ from openpyxl import load_workbook, Workbook
  
 from src.pipeline.rfp_processor import RFPProcessor
 from src.pipeline.utils import create_folder_structure, cleanup_temp_files
+from job_store import job_store
  
 app = FastAPI(
     title="RFP Processing Pipeline",
@@ -45,76 +46,100 @@ def get_processor():
  
 @app.post("/process-rfp/")
 async def process_rfp(file: UploadFile = File(...)):
-    """
-    Process an RFP PDF file and return combined Excel file with all sheets
-    """
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
    
-    # Generate unique session ID
-    session_id = str(uuid.uuid4())
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-   
+    job_id = str(uuid.uuid4())
+    job_store.create_job(job_id, file.filename)
+    
+    # Save file
+    os.makedirs("uploads", exist_ok=True)
+    file_path = f"uploads/{job_id}.pdf"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Start background task
+    asyncio.create_task(process_background(job_id, file_path, file.filename))
+    
+    return {"job_id": job_id, "status": "processing"}
+
+async def process_background(job_id: str, pdf_path: str, filename: str):
     try:
-        # Create folder structure for this session
+        session_id = str(uuid.uuid4())
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         session_folder = create_folder_structure(session_id, timestamp)
-       
-        # Save uploaded file
-        pdf_path = session_folder / "input" / file.filename
-        with open(pdf_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-       
-        # Process the RFP through the pipeline
-        proc = get_processor()
-        result = await proc.process_rfp(pdf_path, session_folder)
-       
-        # Create combined Excel file
-        base_path = session_folder / "excel"
         
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-            combined_wb = Workbook()
-            combined_wb.remove(combined_wb.active)  # Remove default sheet
-           
-            excel_files = {
-                'BOQ': 'boq.xlsx',
-                'Prequalification': 'prequalification.xlsx', 
-                'Technical_Qualification': 'technical_qualification.xlsx',
-                'Summary': 'summary.xlsx',
-                'Payment_Terms': 'payment_terms.xlsx'
-            }
-           
-            for sheet_name, filename in excel_files.items():
-                file_path = base_path / filename
-                if file_path.exists():
-                    source_wb = load_workbook(file_path)
-                    source_ws = source_wb.active
-                   
-                    # Create new sheet in combined workbook
-                    new_ws = combined_wb.create_sheet(title=sheet_name)
-                   
-                    # Copy all cells
-                    for row in source_ws.iter_rows():
-                        for cell in row:
-                            new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
-           
-            combined_wb.save(tmp_file.name)
-           
-            # Cleanup session folder after creating combined file
-            cleanup_temp_files(session_folder)
-           
-            return FileResponse(
-                path=tmp_file.name,
-                filename=f"{file.filename.replace('.pdf', '')}_RFP_Analysis.xlsx",
-                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-       
+        # Copy file to session folder
+        session_pdf = session_folder / "input" / filename
+        shutil.copy2(pdf_path, session_pdf)
+        
+        # Process
+        proc = get_processor()
+        await proc.process_rfp(session_pdf, session_folder)
+        
+        # Create result file
+        os.makedirs("results", exist_ok=True)
+        result_path = f"results/{job_id}.xlsx"
+        
+        base_path = session_folder / "excel"
+        combined_wb = Workbook()
+        combined_wb.remove(combined_wb.active)
+        
+        excel_files = {
+            'BOQ': 'boq.xlsx',
+            'Prequalification': 'prequalification.xlsx', 
+            'Technical_Qualification': 'technical_qualification.xlsx',
+            'Summary': 'summary.xlsx',
+            'Payment_Terms': 'payment_terms.xlsx'
+        }
+        
+        for sheet_name, excel_filename in excel_files.items():
+            file_path = base_path / excel_filename
+            if file_path.exists():
+                source_wb = load_workbook(file_path)
+                source_ws = source_wb.active
+                new_ws = combined_wb.create_sheet(title=sheet_name)
+                
+                for row in source_ws.iter_rows():
+                    for cell in row:
+                        new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+        
+        combined_wb.save(result_path)
+        cleanup_temp_files(session_folder)
+        os.remove(pdf_path)
+        
+        job_store.update_job(job_id, status="completed", result_file=result_path)
+        
     except Exception as e:
-        # Cleanup on error
-        if 'session_folder' in locals():
-            cleanup_temp_files(session_folder)
-       
-        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+        job_store.update_job(job_id, status="failed", error=str(e))
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
  
+@app.get("/status/{job_id}")
+async def get_status(job_id: str):
+    job = job_store.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+@app.get("/download/{job_id}")
+async def download_result(job_id: str):
+    job = job_store.get_job(job_id)
+    if not job or job["status"] != "completed":
+        raise HTTPException(status_code=404, detail="Result not ready")
+    
+    return FileResponse(
+        path=job["result_file"],
+        filename=f"{job['filename'].replace('.pdf', '')}_Analysis.xlsx",
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+@app.get("/jobs/active")
+async def get_active_jobs():
+    """Get all currently processing jobs"""
+    active_jobs = job_store.get_active_jobs()
+    return {"active_jobs": active_jobs, "count": len(active_jobs)}
+
 @app.get("/health/")
 async def health_check():
     return JSONResponse(content={"status": "ok", "message": "Service is running"})
