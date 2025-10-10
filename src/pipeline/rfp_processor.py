@@ -40,25 +40,38 @@ class RFPProcessor:
             with open(markdown_path, 'r', encoding='utf-8') as f:
                 rfp_content = f.read()
             
-            # Step 2: Extract information using LLM modules (sequential to avoid rate limits)
+            # Step 2: Extract information using LLM modules
             print("🔄 Step 2: Extracting information using LLM modules...")
-            extraction_results = []
             
-            # Run extractions sequentially with delays
-            for extract_func in [
-                lambda: self._extract_boq(rfp_content, session_folder),
-                lambda: self._extract_pq(rfp_content, session_folder), 
-                lambda: self._extract_tq(rfp_content, session_folder),
-                lambda: self._extract_summary(rfp_content, session_folder),
-                lambda: self._extract_payment_terms(rfp_content, session_folder)
-            ]:
-                try:
-                    result = await extract_func()
-                    extraction_results.append(result)
-                    # Add delay between API calls to respect rate limits
-                    await asyncio.sleep(2)
-                except Exception as e:
-                    extraction_results.append(e)
+            # Import job manager for progress updates
+            try:
+                from ..job_manager import job_manager
+                # Find job_id from session_folder path if available
+                job_id = None
+                for jid, job in job_manager.jobs.items():
+                    if job.get('status') == 'processing':
+                        job_id = jid
+                        break
+                if job_id:
+                    job_manager.update_job(job_id, progress=30)
+            except:
+                pass
+            
+            extraction_tasks = [
+                self._extract_boq(rfp_content, session_folder),
+                self._extract_pq(rfp_content, session_folder), 
+                self._extract_tq(rfp_content, session_folder),
+                self._extract_summary(rfp_content, session_folder),
+                self._extract_payment_terms(rfp_content, session_folder)
+            ]
+            
+            extraction_results = await asyncio.gather(*extraction_tasks, return_exceptions=True)
+            
+            try:
+                if job_id:
+                    job_manager.update_job(job_id, progress=60)
+            except:
+                pass
             
             # Collect successful extractions
             for result in extraction_results:

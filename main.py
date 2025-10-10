@@ -92,25 +92,10 @@ async def process_rfp(file: UploadFile = File(...)):
                     # Create new sheet in combined workbook
                     new_ws = combined_wb.create_sheet(title=sheet_name)
                    
-                    # Copy all cells with formatting
+                    # Copy all cells
                     for row in source_ws.iter_rows():
                         for cell in row:
-                            new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
-                            if cell.has_style:
-                                new_cell.font = cell.font.copy()
-                                new_cell.border = cell.border.copy()
-                                new_cell.fill = cell.fill.copy()
-                                new_cell.number_format = cell.number_format
-                                new_cell.protection = cell.protection.copy()
-                                new_cell.alignment = cell.alignment.copy()
-                   
-                    # Copy column dimensions
-                    for col in source_ws.column_dimensions:
-                        new_ws.column_dimensions[col] = source_ws.column_dimensions[col]
-                   
-                    # Copy row dimensions
-                    for row in source_ws.row_dimensions:
-                        new_ws.row_dimensions[row] = source_ws.row_dimensions[row]
+                            new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
            
             combined_wb.save(tmp_file.name)
            
@@ -140,4 +125,5 @@ async def api_info():
  
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, timeout_keep_alive=1800)
