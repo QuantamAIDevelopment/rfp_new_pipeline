@@ -5,7 +5,7 @@ from pathlib import Path
 
 class JobStore:
     def __init__(self):
-        self.jobs_file = "jobs.json"
+        self.jobs_file = "/home/site/wwwroot/jobs.json"
         self.jobs = self._load_jobs()
     
     def _load_jobs(self):

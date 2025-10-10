@@ -52,9 +52,9 @@ async def process_rfp(file: UploadFile = File(...)):
     job_id = str(uuid.uuid4())
     job_store.create_job(job_id, file.filename)
     
-    # Save file
-    os.makedirs("uploads", exist_ok=True)
-    file_path = f"uploads/{job_id}.pdf"
+    # Save file in persistent location
+    os.makedirs("/home/site/wwwroot/uploads", exist_ok=True)
+    file_path = f"/home/site/wwwroot/uploads/{job_id}.pdf"
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
@@ -77,9 +77,9 @@ async def process_background(job_id: str, pdf_path: str, filename: str):
         proc = get_processor()
         await proc.process_rfp(session_pdf, session_folder)
         
-        # Create result file
-        os.makedirs("results", exist_ok=True)
-        result_path = f"results/{job_id}.xlsx"
+        # Create result file in persistent location
+        os.makedirs("/home/site/wwwroot/results", exist_ok=True)
+        result_path = f"/home/site/wwwroot/results/{job_id}.xlsx"
         
         base_path = session_folder / "excel"
         combined_wb = Workbook()
