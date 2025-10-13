@@ -10,6 +10,8 @@ import shutil
 import tempfile
 import pandas as pd
 from openpyxl import load_workbook, Workbook
+from openpyxl.styles import Font, PatternFill, Border, Alignment, Side
+from openpyxl.utils import get_column_letter
  
 from src.pipeline.rfp_processor import RFPProcessor
 from src.pipeline.utils import create_folder_structure, cleanup_temp_files
@@ -81,34 +83,33 @@ async def process_rfp(file: UploadFile = File(...)):
                 'Payment_Terms': 'payment_terms.xlsx'
             }
            
-            for sheet_name, filename in excel_files.items():
-                file_path = base_path / filename
+            for sheet_name, excel_filename in excel_files.items():
+                file_path = base_path / excel_filename
                 if file_path.exists():
                     source_wb = load_workbook(file_path)
                     source_ws = source_wb.active
-                   
-                    # Create new sheet in combined workbook
                     new_ws = combined_wb.create_sheet(title=sheet_name)
-                   
-                    # Copy all cells with formatting
+                
+                    # Copy all cell data with formatting
                     for row in source_ws.iter_rows():
                         for cell in row:
                             new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
                             if cell.has_style:
-                                new_cell.font = cell.font.copy()
-                                new_cell.border = cell.border.copy()
-                                new_cell.fill = cell.fill.copy()
-                                new_cell.number_format = cell.number_format
-                                new_cell.protection = cell.protection.copy()
-                                new_cell.alignment = cell.alignment.copy()
-                   
-                    # Copy column dimensions
-                    for col in source_ws.column_dimensions:
-                        new_ws.column_dimensions[col] = source_ws.column_dimensions[col]
-                   
-                    # Copy row dimensions
-                    for row in source_ws.row_dimensions:
-                        new_ws.row_dimensions[row] = source_ws.row_dimensions[row]
+                                new_cell.font = Font(name=cell.font.name, size=cell.font.size, bold=cell.font.bold, italic=cell.font.italic, color=cell.font.color)
+                                new_cell.fill = PatternFill(fill_type=cell.fill.fill_type, start_color=cell.fill.start_color, end_color=cell.fill.end_color)
+                                new_cell.border = Border(left=cell.border.left, right=cell.border.right, top=cell.border.top, bottom=cell.border.bottom)
+                                new_cell.alignment = Alignment(horizontal=cell.alignment.horizontal, vertical=cell.alignment.vertical, wrap_text=cell.alignment.wrap_text)
+                
+                    # Copy column widths
+                    for col in source_ws.columns:
+                        column_letter = get_column_letter(col[0].column)
+                        if source_ws.column_dimensions[column_letter].width:
+                            new_ws.column_dimensions[column_letter].width = source_ws.column_dimensions[column_letter].width
+                
+                    # Copy row heights
+                    for row_num in range(1, source_ws.max_row + 1):
+                        if source_ws.row_dimensions[row_num].height:
+                            new_ws.row_dimensions[row_num].height = source_ws.row_dimensions[row_num].height
            
             combined_wb.save(tmp_file.name)
            
