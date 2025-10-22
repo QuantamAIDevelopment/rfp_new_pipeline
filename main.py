@@ -10,10 +10,15 @@ import shutil
 import tempfile
 import pandas as pd
 from openpyxl import load_workbook, Workbook
+from openpyxl.styles import Font, PatternFill, Border, Alignment, Side
+from openpyxl.utils import get_column_letter
  
 from src.pipeline.rfp_processor import RFPProcessor
 from src.pipeline.utils import create_folder_structure, cleanup_temp_files
 from job_store import job_store
+
+from dotenv import load_dotenv
+load_dotenv()
  
 app = FastAPI(
     title="RFP Processing Pipeline",
@@ -24,13 +29,10 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://allvy-rfp-reactapp-emawb4fsefegfgcd.centralindia-01.azurewebsites.net",
-        "https://allvy-rfp-pythonservice-ang2cfbna2dahmc8.centralindia-01.azurewebsites.net",
-    ],
+    allow_origins=[origin.strip() for origin in os.getenv("CORS-ORIGINS", "").split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -101,9 +103,26 @@ async def process_background(job_id: str, pdf_path: str, filename: str):
                 source_ws = source_wb.active
                 new_ws = combined_wb.create_sheet(title=sheet_name)
                 
+                # Copy all cell data with formatting
                 for row in source_ws.iter_rows():
                     for cell in row:
-                        new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+                        new_cell = new_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+                        if cell.has_style:
+                            new_cell.font = Font(name=cell.font.name, size=cell.font.size, bold=cell.font.bold, italic=cell.font.italic, color=cell.font.color)
+                            new_cell.fill = PatternFill(fill_type=cell.fill.fill_type, start_color=cell.fill.start_color, end_color=cell.fill.end_color)
+                            new_cell.border = Border(left=cell.border.left, right=cell.border.right, top=cell.border.top, bottom=cell.border.bottom)
+                            new_cell.alignment = Alignment(horizontal=cell.alignment.horizontal, vertical=cell.alignment.vertical, wrap_text=cell.alignment.wrap_text)
+                
+                # Copy column widths
+                for col in source_ws.columns:
+                    column_letter = get_column_letter(col[0].column)
+                    if source_ws.column_dimensions[column_letter].width:
+                        new_ws.column_dimensions[column_letter].width = source_ws.column_dimensions[column_letter].width
+                
+                # Copy row heights
+                for row_num in range(1, source_ws.max_row + 1):
+                    if source_ws.row_dimensions[row_num].height:
+                        new_ws.row_dimensions[row_num].height = source_ws.row_dimensions[row_num].height
         
         combined_wb.save(result_path)
         cleanup_temp_files(session_folder)
